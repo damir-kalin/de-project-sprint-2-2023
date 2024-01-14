@@ -70,7 +70,7 @@ dwh_update_delta AS ( -- делаем выборку заказчиков, по 
                 WHERE dd.exist_customer_id IS NOT NULL        
 ),
 dwh_delta_insert_result AS ( -- делаем расчёт витрины по новым данным. Этой информации по заказчикам в рамках расчётного периода раньше не было, это новые данные. Их можно просто вставить (insert) в витрину без обновления
-    SELECT  
+    SELECT  distinct
             T4.customer_id AS customer_id,
             T4.customer_name AS customer_name,
             T4.customer_address AS customer_address,
@@ -80,8 +80,8 @@ dwh_delta_insert_result AS ( -- делаем расчёт витрины по н
             T4.platform_money AS platform_money,
             T4.count_order AS count_order,
             T4.avg_price_order AS avg_price_order,
-            T4.product_type AS top_product_category,
-            T4.craftsman_id as top_craftsman_id,
+            first_value(T4.product_type) over (partition by T4.customer_id order by T4.customer_id) AS top_product_category,
+            first_value(T4.craftsman_id) over (partition by T4.customer_id order by T4.customer_id) as top_craftsman_id,
             T4.median_time_order_completed AS median_time_order_completed,
             T4.count_order_created AS count_order_created,
             T4.count_order_in_progress AS count_order_in_progress,
@@ -136,7 +136,7 @@ dwh_delta_insert_result AS ( -- делаем расчёт витрины по н
                 ) AS T4 WHERE T4.rank_count_product = 1 and T4.rank_count_craftsman_id = 1 ORDER BY report_period -- условие помогает оставить в выборке первую по популярности категорию товаров
 ),
 dwh_delta_update_result AS ( -- делаем перерасчёт для существующих записей витринs, так как данные обновились за отчётные периоды. Логика похожа на insert, но нужно достать конкретные данные из DWH
-    SELECT 
+    SELECT distinct
             T4.customer_id AS customer_id,
             T4.customer_name AS customer_name,
             T4.customer_address AS customer_address,
@@ -146,8 +146,8 @@ dwh_delta_update_result AS ( -- делаем перерасчёт для сущ�
             T4.platform_money AS platform_money,
             T4.count_order AS count_order,
             T4.avg_price_order AS avg_price_order,
-            T4.product_type AS top_product_category,
-            T4.craftsman_id as top_craftsman_id,            
+            first_value(T4.product_type) over (partition by T4.customer_id order by T4.customer_id) AS top_product_category,
+            first_value(T4.craftsman_id) over (partition by T4.customer_id order by T4.customer_id) as top_craftsman_id,            
             T4.median_time_order_completed AS median_time_order_completed,
             T4.count_order_created AS count_order_created,
             T4.count_order_in_progress AS count_order_in_progress,
